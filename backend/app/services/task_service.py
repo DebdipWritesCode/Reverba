@@ -1,0 +1,173 @@
+from datetime import datetime, date
+from bson import ObjectId
+from fastapi import HTTPException, status
+from app.database import get_daily_tasks_collection, get_words_collection
+from app.models.daily_task import DailyTaskResponse, TaskItem, TaskStatus, TaskResult
+from typing import List, Optional
+from app.services.cron_service import generate_daily_tasks_for_user
+
+async def get_today_tasks(user_id: str) -> dict:
+    """Get today's tasks for a user, creating them if they don't exist"""
+    daily_tasks_collection = get_daily_tasks_collection()
+    today = date.today().isoformat()
+    
+    # Try to fetch today's tasks
+    daily_task = await daily_tasks_collection.find_one({
+        "userId": ObjectId(user_id),
+        "date": today
+    })
+    
+    # If tasks don't exist, generate them (this should normally be done by cron)
+    if not daily_task:
+        # Generate tasks for today
+        await generate_daily_tasks_for_user(user_id, today)
+        # Fetch again
+        daily_task = await daily_tasks_collection.find_one({
+            "userId": ObjectId(user_id),
+            "date": today
+        })
+    
+    if not daily_task:
+        # Still no tasks - user might not have any words
+        return {
+            "id": None,
+            "userId": user_id,
+            "date": today,
+            "tasks": [],
+            "createdAt": datetime.utcnow()
+        }
+    
+    return _task_doc_to_response(daily_task)
+
+async def complete_task(
+    user_id: str,
+    task_id: str,
+    result: TaskResult
+) -> dict:
+    """Mark a task as completed and update word statistics"""
+    daily_tasks_collection = get_daily_tasks_collection()
+    words_collection = get_words_collection()
+    today = date.today().isoformat()
+    
+    # Find the daily task document
+    daily_task = await daily_tasks_collection.find_one({
+        "userId": ObjectId(user_id),
+        "date": today
+    })
+    
+    if not daily_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Daily tasks not found for today"
+        )
+    
+    # Find the specific task
+    task_found = False
+    for task in daily_task.get("tasks", []):
+        if task["taskId"] == task_id:
+            task_found = True
+            # Update task status
+            task["status"] = TaskStatus.COMPLETED.value
+            task["result"] = result.value
+            
+            # Update word statistics
+            word_ids = task.get("wordIds", [])
+            task_type = task.get("type")
+            
+            for word_id_str in word_ids:
+                word_id = ObjectId(word_id_str)
+                word = await words_collection.find_one({"_id": word_id})
+                
+                if word:
+                    update_doc = {
+                        "lastReviewedAt": datetime.utcnow(),
+                        "updatedAt": datetime.utcnow()
+                    }
+                    
+                    if result == TaskResult.FAIL:
+                        # Increment failure stats
+                        failure_field = f"failureStats.{task_type.lower()}"
+                        await words_collection.update_one(
+                            {"_id": word_id},
+                            {
+                                "$inc": {failure_field: 1},
+                                "$set": update_doc
+                            }
+                        )
+                    else:
+                        # Success - update word based on priority
+                        if word.get("priority") == 4:
+                            # Increment mastery count for P4
+                            new_mastery_count = word.get("masteryCount", 0) + 1
+                            await words_collection.update_one(
+                                {"_id": word_id},
+                                {
+                                    "$set": {
+                                        **update_doc,
+                                        "masteryCount": new_mastery_count
+                                    }
+                                }
+                            )
+                            
+                            # Check if word should be marked as mastered
+                            if new_mastery_count >= 3:
+                                await words_collection.update_one(
+                                    {"_id": word_id},
+                                    {"$set": {"state": "MASTERED"}}
+                                )
+                        else:
+                            # Just update last reviewed
+                            await words_collection.update_one(
+                                {"_id": word_id},
+                                {"$set": update_doc}
+                            )
+            
+            break
+    
+    if not task_found:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    
+    # Update the daily task document
+    await daily_tasks_collection.update_one(
+        {"_id": daily_task["_id"]},
+        {"$set": {"tasks": daily_task["tasks"]}}
+    )
+    
+    # Fetch updated document
+    updated_task = await daily_tasks_collection.find_one({"_id": daily_task["_id"]})
+    return _task_doc_to_response(updated_task)
+
+async def get_task_history(
+    user_id: str,
+    limit: int = 30
+) -> List[dict]:
+    """Get task history for a user"""
+    daily_tasks_collection = get_daily_tasks_collection()
+    
+    tasks = await daily_tasks_collection.find({
+        "userId": ObjectId(user_id)
+    }).sort("date", -1).limit(limit).to_list(length=limit)
+    
+    return [_task_doc_to_response(task) for task in tasks]
+
+def _task_doc_to_response(task_doc: dict) -> dict:
+    """Convert task document to response model"""
+    return {
+        "id": str(task_doc["_id"]),
+        "userId": str(task_doc["userId"]),
+        "date": task_doc["date"],
+        "tasks": [
+            {
+                "taskId": task["taskId"],
+                "type": task["type"],
+                "wordIds": task["wordIds"],
+                "status": task["status"],
+                "result": task.get("result")
+            }
+            for task in task_doc.get("tasks", [])
+        ],
+        "createdAt": task_doc["createdAt"]
+    }

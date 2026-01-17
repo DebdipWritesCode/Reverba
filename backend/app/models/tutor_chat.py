@@ -1,0 +1,39 @@
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime
+from enum import Enum
+from app.models.daily_task import TaskType, TaskResult
+
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+class EvaluationResult(str, Enum):
+    PASS = "PASS"
+    FAIL = "FAIL"
+
+# Request Models
+class TutorEvaluationRequest(BaseModel):
+    wordId: str
+    taskType: TaskType
+    userResponse: str
+
+# Response Models
+class TutorEvaluationResponse(BaseModel):
+    result: EvaluationResult
+    feedback: str
+    hint: Optional[str] = None
+    answerRevealed: bool = False
+    chatId: Optional[str] = None
+
+class TutorChatResponse(BaseModel):
+    id: str
+    userId: str
+    wordId: str
+    taskType: TaskType
+    messages: List[ChatMessage]
+    finalResult: TaskResult
+    createdAt: datetime
+    
+    class Config:
+        from_attributes = True
