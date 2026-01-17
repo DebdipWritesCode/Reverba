@@ -1,0 +1,25 @@
+import { useSelector } from 'react-redux'
+import type { RootState } from '@/store'
+import { Navigate } from 'react-router-dom'
+import type { JSX } from 'react'
+
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const token = useSelector((state: RootState) => state.auth.accessToken)
+  const isInitialized = useSelector((state: RootState) => state.auth.isInitialized)
+
+  // Wait for auth initialization before checking token
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return token ? children : <Navigate to="/login" replace />
+}
+
+export default ProtectedRoute
