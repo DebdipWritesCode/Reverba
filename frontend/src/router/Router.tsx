@@ -3,22 +3,12 @@ import Login from '@/pages/Auth/Login'
 import Signup from '@/pages/Auth/Signup'
 import ProtectedRoute from './ProtectedRoute'
 import DashboardLayout from '@/layouts/DashboardLayout'
+import Dashboard from '@/pages/Dashboard'
 import AddWords from '@/pages/AddWords'
 import TodaysTasks from '@/pages/TodaysTasks'
 import ChatHistory from '@/pages/ChatHistory'
 import MyProfile from '@/pages/MyProfile'
 
-// Placeholder dashboard component
-const Dashboard = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-4">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome to your vocabulary app!</p>
-      </div>
-    </div>
-  )
-}
 
 
 
