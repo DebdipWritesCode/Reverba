@@ -44,11 +44,14 @@ const authSlice = createSlice({
       state.firstName = action.payload.firstName || null
       state.lastName = action.payload.lastName || null
     },
+    updateUserEmail: (state, action) => {
+      state.email = action.payload.email || null
+    },
     setInitialized: (state) => {
       state.isInitialized = true
     },
   },
 })
 
-export const { setAccessToken, clearAccessToken, setUserData, setInitialized } = authSlice.actions
+export const { setAccessToken, clearAccessToken, setUserData, setInitialized, updateUserEmail } = authSlice.actions
 export default authSlice.reducer

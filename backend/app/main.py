@@ -6,7 +6,10 @@ from app.database import (
     connect_to_mongo, close_mongo_connection,
     get_users_collection, get_refresh_tokens_collection,
     get_words_collection, get_daily_tasks_collection,
-    get_tutor_chats_collection
+    get_tutor_chats_collection,
+    get_otps_collection, get_password_reset_otps_collection,
+    get_password_reset_eligibility_collection,
+    get_email_change_otps_collection, get_email_change_eligibility_collection
 )
 from app.settings.get_env import CORS_ORIGINS, APP_ENV
 from app.routers import auth, words, tasks, tutor, dashboard
@@ -50,11 +53,43 @@ async def create_indexes():
         # Index might already exist, which is fine
         logger.warning(f"Index creation warning (may already exist): {e}")
 
+async def create_ttl_indexes():
+    """Create TTL indexes for OTPs, refresh tokens, and password reset collections"""
+    try:
+        # Create TTL index for OTPs (expire after 15 minutes = 900 seconds)
+        otps_collection = get_otps_collection()
+        await otps_collection.create_index("expires_at", expireAfterSeconds=900)
+        logger.info("TTL index created for OTPs collection (15 minutes)")
+        
+        # Create TTL index for password reset OTPs (expire after 15 minutes = 900 seconds)
+        password_reset_otps_collection = get_password_reset_otps_collection()
+        await password_reset_otps_collection.create_index("expires_at", expireAfterSeconds=900)
+        logger.info("TTL index created for password_reset_otps collection (15 minutes)")
+        
+        # Create TTL index for password reset eligibility (expire after 15 minutes = 900 seconds)
+        password_reset_eligibility_collection = get_password_reset_eligibility_collection()
+        await password_reset_eligibility_collection.create_index("expires_at", expireAfterSeconds=900)
+        logger.info("TTL index created for password_reset_eligibility collection (15 minutes)")
+        
+        # Create TTL index for email change OTPs (expire after 15 minutes = 900 seconds)
+        email_change_otps_collection = get_email_change_otps_collection()
+        await email_change_otps_collection.create_index("expires_at", expireAfterSeconds=900)
+        logger.info("TTL index created for email_change_otps collection (15 minutes)")
+        
+        # Create TTL index for email change eligibility (expire after 30 minutes = 1800 seconds)
+        email_change_eligibility_collection = get_email_change_eligibility_collection()
+        await email_change_eligibility_collection.create_index("expires_at", expireAfterSeconds=1800)
+        logger.info("TTL index created for email_change_eligibility collection (30 minutes)")
+    except Exception as e:
+        # Index might already exist, which is fine
+        logger.warning(f"TTL index creation warning (may already exist): {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await connect_to_mongo()
     await create_indexes()
+    await create_ttl_indexes()
     start_scheduler()
     yield
     # Shutdown

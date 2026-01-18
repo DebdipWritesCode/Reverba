@@ -45,9 +45,9 @@ const Signup = () => {
     setError(null)
     try {
       await authApi.signup(data)
-      // Redirect to login after successful signup
-      navigate('/login', {
-        state: { message: 'Account created successfully! Please sign in to continue.' }
+      // Redirect to verify email page after successful signup
+      navigate(`/verify-email?email=${encodeURIComponent(data.email)}`, {
+        state: { message: 'Account created successfully! Please verify your email to continue.' }
       })
     } catch (err: any) {
       setError(

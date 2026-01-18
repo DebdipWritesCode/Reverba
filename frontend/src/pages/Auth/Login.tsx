@@ -91,8 +91,20 @@ const Login = () => {
               </div>
             )}
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-                {error}
+              <div className="space-y-2">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+                  {error}
+                </div>
+                {(error.toLowerCase().includes('email not verified') || error.toLowerCase().includes('verify your email')) && (
+                  <div className="text-center">
+                    <Link
+                      to={`/verify-email?email=${encodeURIComponent(form.getValues('email'))}`}
+                      className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 underline"
+                    >
+                      Verify your email
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
             <div className="space-y-4">
@@ -114,7 +126,15 @@ const Login = () => {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Password</FormLabel>
+                      <Link
+                        to="/forgot-password"
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>

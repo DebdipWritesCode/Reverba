@@ -26,6 +26,10 @@ OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 # Cron
 CRON_TIMEZONE: str = os.getenv("CRON_TIMEZONE", "Asia/Kolkata")
 
+# Email (Resend)
+RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "")
+
 # Application
 APP_SECRET_KEY: str = os.getenv("APP_SECRET_KEY", "")
 APP_ENV: str = os.getenv("APP_ENV", "development")
@@ -42,6 +46,7 @@ if APP_ENV == "production":
         ("MONGO_URI", MONGO_URI),
         ("OPENAI_API_KEY", OPENAI_API_KEY),
         ("APP_SECRET_KEY", APP_SECRET_KEY),
+        ("RESEND_API_KEY", RESEND_API_KEY),
     ]
     
     missing_vars = [var_name for var_name, var_value in required_vars if not var_value]

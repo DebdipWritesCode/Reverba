@@ -28,6 +28,7 @@ class UserResponse(BaseModel):
     firstName: str
     lastName: str
     isActive: bool
+    is_verified: bool = False
     createdAt: datetime
     lastLoginAt: Optional[datetime] = None
     

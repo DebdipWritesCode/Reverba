@@ -74,3 +74,18 @@ def get_tutor_chats_collection():
 
 def get_cron_runs_collection():
     return get_database().cron_runs
+
+def get_otps_collection():
+    return get_database().otps
+
+def get_password_reset_otps_collection():
+    return get_database().password_reset_otps
+
+def get_password_reset_eligibility_collection():
+    return get_database().password_reset_eligibility
+
+def get_email_change_otps_collection():
+    return get_database().email_change_otps
+
+def get_email_change_eligibility_collection():
+    return get_database().email_change_eligibility

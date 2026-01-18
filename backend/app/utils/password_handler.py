@@ -32,3 +32,21 @@ def verify_token(plain_token: str, hashed_token: str) -> bool:
     # Hash the plain token and compare
     token_hash = hash_token(plain_token)
     return token_hash == hashed_token
+
+def hash_otp(otp: str) -> str:
+    """Hash an OTP using bcrypt"""
+    # Encode OTP to bytes
+    otp_bytes = otp.encode('utf-8')
+    # Generate salt and hash OTP
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(otp_bytes, salt)
+    # Return as string
+    return hashed.decode('utf-8')
+
+def verify_otp(plain_otp: str, hashed_otp: str) -> bool:
+    """Verify an OTP against its hash"""
+    # Encode both to bytes
+    otp_bytes = plain_otp.encode('utf-8')
+    hashed_bytes = hashed_otp.encode('utf-8')
+    # Verify OTP
+    return bcrypt.checkpw(otp_bytes, hashed_bytes)
