@@ -45,7 +45,8 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
           dispatch(setUserData({ 
             email: response.data.email,
             firstName: response.data.firstName || null,
-            lastName: response.data.lastName || null
+            lastName: response.data.lastName || null,
+            isAdmin: response.data.isAdmin || false
           }))
         } else {
           // No token in response, clear and mark as initialized

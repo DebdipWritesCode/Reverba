@@ -53,10 +53,15 @@ const Login = () => {
       dispatch(setUserData({ 
         email: response.email,
         firstName: response.firstName || null,
-        lastName: response.lastName || null
+        lastName: response.lastName || null,
+        isAdmin: response.isAdmin || false
       }))
-      // Redirect to dashboard
-      navigate('/dashboard')
+      // Redirect based on admin status
+      if (response.isAdmin) {
+        navigate('/admin')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err: any) {
       setError(
         err.response?.data?.detail || err.response?.data?.message || 'Invalid email or password'

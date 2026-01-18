@@ -6,6 +6,7 @@ interface AuthState {
   email: string | null
   firstName: string | null
   lastName: string | null
+  isAdmin: boolean
 }
 
 const initialState: AuthState = {
@@ -14,6 +15,7 @@ const initialState: AuthState = {
   email: null,
   firstName: null,
   lastName: null,
+  isAdmin: false,
 }
 
 const authSlice = createSlice({
@@ -37,12 +39,14 @@ const authSlice = createSlice({
       state.email = null
       state.firstName = null
       state.lastName = null
+      state.isAdmin = false
       state.isInitialized = true
     },
     setUserData: (state, action) => {
       state.email = action.payload.email || null
       state.firstName = action.payload.firstName || null
       state.lastName = action.payload.lastName || null
+      state.isAdmin = action.payload.isAdmin || false
     },
     updateUserEmail: (state, action) => {
       state.email = action.payload.email || null

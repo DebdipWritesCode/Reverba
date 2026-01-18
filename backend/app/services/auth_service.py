@@ -48,7 +48,8 @@ async def register_user(user_data: UserRegister) -> dict:
         "passwordHash": hash_password(user_data.password),
         "firstName": user_data.firstName,
         "lastName": user_data.lastName,
-        "isActive": True,
+        "isAdmin": False,
+        "isRevoked": False,
         "is_verified": False,
         "createdAt": datetime.utcnow(),
         "lastLoginAt": None
@@ -75,7 +76,8 @@ async def register_user(user_data: UserRegister) -> dict:
         "email": user_doc["email"],
         "firstName": user_doc["firstName"],
         "lastName": user_doc["lastName"],
-        "isActive": user_doc["isActive"],
+        "isAdmin": user_doc.get("isAdmin", False),
+        "isRevoked": user_doc.get("isRevoked", False),
         "is_verified": user_doc["is_verified"],
         "createdAt": user_doc["createdAt"],
         "lastLoginAt": user_doc["lastLoginAt"]
@@ -100,11 +102,11 @@ async def login_user(user_data: UserLogin, response: Response) -> dict:
             detail="Invalid email or password"
         )
     
-    # Check if user is active
-    if not user.get("isActive", True):
+    # Check if user is revoked
+    if user.get("isRevoked", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            detail="Your account access has been revoked. Please contact support."
         )
     
     # Check if email is verified
@@ -152,7 +154,8 @@ async def login_user(user_data: UserLogin, response: Response) -> dict:
         "token_type": "bearer",
         "email": user["email"],
         "firstName": user.get("firstName", ""),
-        "lastName": user.get("lastName", "")
+        "lastName": user.get("lastName", ""),
+        "isAdmin": user.get("isAdmin", False)
     }
 
 async def refresh_access_token(refresh_token: str, response: Response) -> dict:
@@ -204,10 +207,17 @@ async def refresh_access_token(refresh_token: str, response: Response) -> dict:
     # Get user
     users_collection = get_users_collection()
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
-    if not user or not user.get("isActive", True):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or inactive"
+            detail="User not found"
+        )
+    
+    # Check if user is revoked
+    if user.get("isRevoked", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account access has been revoked. Please contact support."
         )
     
     # Create new access token
@@ -218,7 +228,8 @@ async def refresh_access_token(refresh_token: str, response: Response) -> dict:
         "token_type": "bearer",
         "email": user["email"],
         "firstName": user.get("firstName", ""),
-        "lastName": user.get("lastName", "")
+        "lastName": user.get("lastName", ""),
+        "isAdmin": user.get("isAdmin", False)
     }
 
 async def logout_user(refresh_token: str, response: Response) -> dict:
@@ -270,7 +281,8 @@ async def update_profile(user_id: str, profile_data: ProfileUpdate) -> dict:
         "email": updated_user["email"],
         "firstName": updated_user["firstName"],
         "lastName": updated_user["lastName"],
-        "isActive": updated_user["isActive"],
+        "isAdmin": updated_user.get("isAdmin", False),
+        "isRevoked": updated_user.get("isRevoked", False),
         "is_verified": updated_user.get("is_verified", False),
         "createdAt": updated_user["createdAt"],
         "lastLoginAt": updated_user.get("lastLoginAt")

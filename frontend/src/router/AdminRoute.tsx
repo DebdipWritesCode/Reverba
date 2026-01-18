@@ -3,12 +3,16 @@ import type { RootState } from '@/store'
 import { Navigate } from 'react-router-dom'
 import type { JSX } from 'react'
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const token = useSelector((state: RootState) => state.auth.accessToken)
-  const isInitialized = useSelector((state: RootState) => state.auth.isInitialized)
-  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin)
+interface AdminRouteProps {
+  children: JSX.Element
+}
 
-  // Wait for auth initialization before checking token
+const AdminRoute = ({ children }: AdminRouteProps) => {
+  const token = useSelector((state: RootState) => state.auth.accessToken)
+  const isAdmin = useSelector((state: RootState) => state.auth.isAdmin)
+  const isInitialized = useSelector((state: RootState) => state.auth.isInitialized)
+
+  // Wait for auth initialization before checking
   if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -25,12 +29,12 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
     return <Navigate to="/login" replace />
   }
 
-  // If admin, redirect to admin dashboard (admins shouldn't access user routes)
-  if (isAdmin) {
-    return <Navigate to="/admin" replace />
+  // If not admin, redirect to dashboard
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />
   }
 
   return children
 }
 
-export default ProtectedRoute
+export default AdminRoute

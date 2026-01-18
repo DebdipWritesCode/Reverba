@@ -4,12 +4,14 @@ import Signup from '@/pages/Auth/Signup'
 import VerifyEmail from '@/pages/Auth/VerifyEmail'
 import ForgotPassword from '@/pages/Auth/ForgotPassword'
 import ProtectedRoute from './ProtectedRoute'
+import AdminRoute from './AdminRoute'
 import DashboardLayout from '@/layouts/DashboardLayout'
 import Dashboard from '@/pages/Dashboard'
 import AddWords from '@/pages/AddWords'
 import TodaysTasks from '@/pages/TodaysTasks'
 import ChatHistory from '@/pages/ChatHistory'
 import MyProfile from '@/pages/MyProfile'
+import Admin from '@/pages/Admin'
 
 
 
@@ -64,6 +66,14 @@ const Router = () => {
         <Route path="/chat-history" element={<ChatHistory />} />
         <Route path="/my-profile" element={<MyProfile />} />
       </Route>
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <Admin />
+          </AdminRoute>
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

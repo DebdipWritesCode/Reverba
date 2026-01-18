@@ -44,13 +44,24 @@ async def get_current_user(request: Request) -> dict:
             detail="User not found",
         )
     
-    if not user.get("isActive", True):
+    if user.get("isRevoked", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive",
+            detail="Your account access has been revoked. Please contact support.",
         )
     
     return {
         "user_id": str(user["_id"]),
-        "email": user["email"]
+        "email": user["email"],
+        "isAdmin": user.get("isAdmin", False)
     }
+
+async def get_current_admin_user(request: Request) -> dict:
+    """Get current admin user from access token"""
+    user = await get_current_user(request)
+    if not user.get("isAdmin", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions"
+        )
+    return user

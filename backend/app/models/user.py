@@ -27,7 +27,8 @@ class UserResponse(BaseModel):
     email: str
     firstName: str
     lastName: str
-    isActive: bool
+    isAdmin: bool = False
+    isRevoked: bool = False
     is_verified: bool = False
     createdAt: datetime
     lastLoginAt: Optional[datetime] = None
@@ -42,3 +43,4 @@ class TokenResponse(BaseModel):
     email: str
     firstName: str
     lastName: str
+    isAdmin: bool = False

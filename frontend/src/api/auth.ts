@@ -17,7 +17,8 @@ export interface SignupResponse {
   email: string
   firstName: string
   lastName: string
-  isActive: boolean
+  isAdmin: boolean
+  isRevoked: boolean
   is_verified: boolean
   createdAt: string
   lastLoginAt: string | null
@@ -29,6 +30,7 @@ export interface LoginResponse {
   email: string
   firstName: string
   lastName: string
+  isAdmin?: boolean
 }
 
 export interface TokenResponse {
@@ -37,6 +39,7 @@ export interface TokenResponse {
   email: string
   firstName: string
   lastName: string
+  isAdmin?: boolean
 }
 
 export interface ProfileUpdateData {

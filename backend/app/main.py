@@ -12,7 +12,7 @@ from app.database import (
     get_email_change_otps_collection, get_email_change_eligibility_collection
 )
 from app.settings.get_env import CORS_ORIGINS, APP_ENV
-from app.routers import auth, words, tasks, tutor, dashboard
+from app.routers import auth, words, tasks, tutor, dashboard, admin
 from app.cron.scheduler import start_scheduler, shutdown_scheduler
 
 logger = logging.getLogger(__name__)
@@ -118,6 +118,7 @@ app.include_router(words.router)
 app.include_router(tasks.router)
 app.include_router(tutor.router)
 app.include_router(dashboard.router)
+app.include_router(admin.router)
 
 @app.get("/")
 async def root():

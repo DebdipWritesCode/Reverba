@@ -31,7 +31,7 @@ async def generate_daily_tasks():
     
     try:
         # Get all active users
-        active_users = await users_collection.find({"isActive": True}).to_list(length=None)
+        active_users = await users_collection.find({"isRevoked": False}).to_list(length=None)
         
         for user in active_users:
             try:
