@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import Login from '@/pages/Auth/Login'
 import Signup from '@/pages/Auth/Signup'
 import ProtectedRoute from './ProtectedRoute'
+import DashboardLayout from '@/layouts/DashboardLayout'
 
 // Placeholder dashboard component
 const Dashboard = () => {
@@ -15,12 +16,57 @@ const Dashboard = () => {
   )
 }
 
+// Placeholder components for new routes
+const TodaysTasks = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold mb-4">Today's Tasks</h1>
+        <p className="text-muted-foreground">Your tasks for today will appear here.</p>
+      </div>
+    </div>
+  )
+}
+
+const AddWords = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold mb-4">Add Words</h1>
+        <p className="text-muted-foreground">Add new words to your vocabulary.</p>
+      </div>
+    </div>
+  )
+}
+
+const ChatHistory = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold mb-4">Chat History</h1>
+        <p className="text-muted-foreground">Your chat history will appear here.</p>
+      </div>
+    </div>
+  )
+}
+
+const MyProfile = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold mb-4">My Profile</h1>
+        <p className="text-muted-foreground">Manage your profile settings.</p>
+      </div>
+    </div>
+  )
+}
+
 // Placeholder landing page
 const Landing = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Vocabulary App</h1>
+        <h1 className="text-4xl font-bold mb-4">Reverba</h1>
         <p className="text-muted-foreground mb-8">Learn and master new words</p>
         <div className="space-x-4">
           <a href="/login" className="text-primary hover:underline">Login</a>
@@ -51,13 +97,18 @@ const Router = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route
-        path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <DashboardLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/today-tasks" element={<TodaysTasks />} />
+        <Route path="/add-words" element={<AddWords />} />
+        <Route path="/chat-history" element={<ChatHistory />} />
+        <Route path="/my-profile" element={<MyProfile />} />
+      </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
   )

@@ -23,6 +23,8 @@ async def register_user(user_data: UserRegister) -> dict:
     user_doc = {
         "email": user_data.email,
         "passwordHash": hash_password(user_data.password),
+        "firstName": user_data.firstName,
+        "lastName": user_data.lastName,
         "isActive": True,
         "createdAt": datetime.utcnow(),
         "lastLoginAt": None
@@ -34,6 +36,8 @@ async def register_user(user_data: UserRegister) -> dict:
     return {
         "id": str(user_doc["_id"]),
         "email": user_doc["email"],
+        "firstName": user_doc["firstName"],
+        "lastName": user_doc["lastName"],
         "isActive": user_doc["isActive"],
         "createdAt": user_doc["createdAt"],
         "lastLoginAt": user_doc["lastLoginAt"]
@@ -101,7 +105,9 @@ async def login_user(user_data: UserLogin, response: Response) -> dict:
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "email": user["email"]
+        "email": user["email"],
+        "firstName": user.get("firstName", ""),
+        "lastName": user.get("lastName", "")
     }
 
 async def refresh_access_token(refresh_token: str, response: Response) -> dict:
@@ -165,7 +171,9 @@ async def refresh_access_token(refresh_token: str, response: Response) -> dict:
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "email": user["email"]
+        "email": user["email"],
+        "firstName": user.get("firstName", ""),
+        "lastName": user.get("lastName", "")
     }
 
 async def logout_user(refresh_token: str, response: Response) -> dict:

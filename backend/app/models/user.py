@@ -6,6 +6,8 @@ from datetime import datetime
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
+    firstName: str
+    lastName: str
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -15,6 +17,8 @@ class UserLogin(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: str
+    firstName: str
+    lastName: str
     isActive: bool
     createdAt: datetime
     lastLoginAt: Optional[datetime] = None
