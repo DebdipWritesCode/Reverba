@@ -6,7 +6,7 @@ from app.database import get_users_collection, get_refresh_tokens_collection
 from app.models.user import UserRegister, UserLogin, ProfileUpdate, PasswordChange
 from app.utils.password_handler import hash_password, verify_password, hash_token
 from app.utils.jwt_handler import create_access_token, create_refresh_token, verify_refresh_token
-from app.settings.get_env import REFRESH_TOKEN_EXPIRE_DAYS
+from app.settings.get_env import REFRESH_TOKEN_EXPIRE_DAYS, APP_ENV
 from app.services.email_service import send_verification_email, send_password_reset_email, send_email_change_otp
 from app.services.otp_service import create_otp, verify_otp
 from app.services.password_reset_service import (
@@ -139,14 +139,17 @@ async def login_user(user_data: UserLogin, response: Response) -> dict:
         "createdAt": datetime.utcnow()
     })
     
-    # Set refresh token in HTTP-only cookie
+    # Set refresh token in HTTP-only cookie (cross-origin enabled)
+    # For cross-origin cookies: samesite must be "none" and secure must be True
+    is_production = APP_ENV == "production"
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
-        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+        secure=is_production,  # True in production (HTTPS required), False in development
+        samesite="none" if is_production else "lax",  # "none" for cross-origin, "lax" for same-origin
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        domain=None  # No domain restriction for cross-origin cookies
     )
     
     return {
@@ -247,8 +250,14 @@ async def logout_user(refresh_token: str, response: Response) -> dict:
         {"$set": {"revoked": True}}
     )
     
-    # Clear cookie
-    response.delete_cookie(key="refresh_token")
+    # Clear cookie (with same settings as set_cookie for cross-origin)
+    is_production = APP_ENV == "production"
+    response.delete_cookie(
+        key="refresh_token",
+        domain=None,  # No domain restriction for cross-origin cookies
+        samesite="none" if is_production else "lax",
+        secure=is_production
+    )
     
     return {"message": "Logged out successfully"}
 
