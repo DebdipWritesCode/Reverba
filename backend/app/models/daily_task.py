@@ -33,7 +33,7 @@ class TaskItem(BaseModel):
 
 # Response Models
 class DailyTaskResponse(BaseModel):
-    id: str
+    id: Optional[str]
     userId: str
     date: str  # YYYY-MM-DD
     tasks: List[TaskItem]
