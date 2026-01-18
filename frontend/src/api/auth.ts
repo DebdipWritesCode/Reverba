@@ -38,6 +38,16 @@ export interface TokenResponse {
   lastName: string
 }
 
+export interface ProfileUpdateData {
+  firstName: string
+  lastName: string
+}
+
+export interface PasswordChangeData {
+  currentPassword: string
+  newPassword: string
+}
+
 export const authApi = {
   signup: async (data: SignupData): Promise<SignupResponse> => {
     const response = await api.post<SignupResponse>('/api/auth/register', data)
@@ -51,6 +61,16 @@ export const authApi = {
 
   logout: async (): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>('/api/auth/logout')
+    return response.data
+  },
+
+  updateProfile: async (data: ProfileUpdateData): Promise<SignupResponse> => {
+    const response = await api.put<SignupResponse>('/api/auth/profile', data)
+    return response.data
+  },
+
+  changePassword: async (data: PasswordChangeData): Promise<{ message: string }> => {
+    const response = await api.put<{ message: string }>('/api/auth/password', data)
     return response.data
   },
 }

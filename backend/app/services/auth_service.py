@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 from fastapi import HTTPException, status, Response
 from app.database import get_users_collection, get_refresh_tokens_collection
-from app.models.user import UserRegister, UserLogin
+from app.models.user import UserRegister, UserLogin, ProfileUpdate, PasswordChange
 from app.utils.password_handler import hash_password, verify_password, hash_token
 from app.utils.jwt_handler import create_access_token, create_refresh_token, verify_refresh_token
 from app.settings.get_env import REFRESH_TOKEN_EXPIRE_DAYS
@@ -195,3 +195,64 @@ async def logout_user(refresh_token: str, response: Response) -> dict:
     response.delete_cookie(key="refresh_token")
     
     return {"message": "Logged out successfully"}
+
+async def update_profile(user_id: str, profile_data: ProfileUpdate) -> dict:
+    """Update user profile (firstName and lastName)"""
+    users_collection = get_users_collection()
+    
+    # Find user by ID
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Update user profile
+    await users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {
+            "firstName": profile_data.firstName,
+            "lastName": profile_data.lastName
+        }}
+    )
+    
+    # Get updated user
+    updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    
+    return {
+        "id": str(updated_user["_id"]),
+        "email": updated_user["email"],
+        "firstName": updated_user["firstName"],
+        "lastName": updated_user["lastName"],
+        "isActive": updated_user["isActive"],
+        "createdAt": updated_user["createdAt"],
+        "lastLoginAt": updated_user.get("lastLoginAt")
+    }
+
+async def change_password(user_id: str, password_data: PasswordChange) -> dict:
+    """Change user password"""
+    users_collection = get_users_collection()
+    
+    # Find user by ID
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Verify current password
+    if not verify_password(password_data.currentPassword, user["passwordHash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect"
+        )
+    
+    # Update password
+    await users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"passwordHash": hash_password(password_data.newPassword)}}
+    )
+    
+    return {"message": "Password changed successfully"}

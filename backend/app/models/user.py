@@ -13,6 +13,14 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class ProfileUpdate(BaseModel):
+    firstName: str
+    lastName: str
+
+class PasswordChange(BaseModel):
+    currentPassword: str
+    newPassword: str
+
 # Response Models
 class UserResponse(BaseModel):
     id: str

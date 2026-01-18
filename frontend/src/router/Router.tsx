@@ -6,6 +6,7 @@ import DashboardLayout from '@/layouts/DashboardLayout'
 import AddWords from '@/pages/AddWords'
 import TodaysTasks from '@/pages/TodaysTasks'
 import ChatHistory from '@/pages/ChatHistory'
+import MyProfile from '@/pages/MyProfile'
 
 // Placeholder dashboard component
 const Dashboard = () => {
@@ -20,16 +21,6 @@ const Dashboard = () => {
 }
 
 
-const MyProfile = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-4">My Profile</h1>
-        <p className="text-muted-foreground">Manage your profile settings.</p>
-      </div>
-    </div>
-  )
-}
 
 // Placeholder landing page
 const Landing = () => {
