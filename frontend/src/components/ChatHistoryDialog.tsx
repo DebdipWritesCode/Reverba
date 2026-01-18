@@ -10,8 +10,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Loader2 } from 'lucide-react'
-import { tutorApi, type TutorChatResponse } from '@/api/tutor'
-import { type TaskType, type TaskResult } from '@/api/tasks'
+import { tutorApi, type TutorChatResponse, type ChatStatus } from '@/api/tutor'
+import { type TaskType } from '@/api/tasks'
 import { wordsApi, type WordResponse } from '@/api/words'
 import { toast } from 'react-toastify'
 import TaskChatInterface from './TaskChatInterface'
@@ -72,8 +72,10 @@ export default function ChatHistoryDialog({
     }
   }
 
-  const getResultColor = (result: TaskResult) => {
-    return result === 'PASS' ? 'success' : 'destructive'
+  const getResultColor = (result: ChatStatus) => {
+    if (result === 'PASS') return 'success'
+    if (result === 'FAIL') return 'destructive'
+    return 'secondary'
   }
 
   if (loading) {

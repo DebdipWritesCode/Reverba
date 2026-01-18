@@ -1,7 +1,8 @@
 import api from './axios'
-import { type TaskType, type TaskResult } from './tasks'
+import { type TaskType } from './tasks'
 
 export type EvaluationResult = 'PASS' | 'FAIL'
+export type ChatStatus = 'PENDING' | 'PASS' | 'FAIL'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -35,7 +36,7 @@ export interface TutorChatResponse {
   wordId: string
   taskType: TaskType
   messages: ChatMessage[]
-  finalResult: TaskResult
+  finalResult: ChatStatus
   createdAt: string
 }
 
@@ -45,7 +46,7 @@ export interface ChatListItem {
   word: string
   meaning: string
   taskType: TaskType
-  finalResult: TaskResult
+  finalResult: ChatStatus
   createdAt: string
   messageCount: number
 }

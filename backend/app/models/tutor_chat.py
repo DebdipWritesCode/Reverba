@@ -12,6 +12,11 @@ class EvaluationResult(str, Enum):
     PASS = "PASS"
     FAIL = "FAIL"
 
+class ChatStatus(str, Enum):
+    PENDING = "PENDING"
+    PASS = "PASS"
+    FAIL = "FAIL"
+
 # Request Models
 class TutorEvaluationRequest(BaseModel):
     wordId: str
@@ -38,7 +43,7 @@ class TutorChatResponse(BaseModel):
     wordId: str
     taskType: TaskType
     messages: List[ChatMessage]
-    finalResult: TaskResult
+    finalResult: ChatStatus
     createdAt: datetime
     
     class Config:
@@ -50,7 +55,7 @@ class ChatListItem(BaseModel):
     word: str
     meaning: str
     taskType: TaskType
-    finalResult: TaskResult
+    finalResult: ChatStatus
     createdAt: datetime
     messageCount: int
     

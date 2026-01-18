@@ -1,8 +1,9 @@
 from datetime import datetime, date
 from bson import ObjectId
 from fastapi import HTTPException, status
-from app.database import get_daily_tasks_collection, get_words_collection
+from app.database import get_daily_tasks_collection, get_words_collection, get_tutor_chats_collection
 from app.models.daily_task import DailyTaskResponse, TaskItem, TaskStatus, TaskResult
+from app.models.tutor_chat import ChatStatus
 from typing import List, Optional
 from app.services.cron_service import generate_daily_tasks_for_user
 
@@ -44,9 +45,10 @@ async def complete_task(
     task_id: str,
     result: TaskResult
 ) -> dict:
-    """Mark a task as completed and update word statistics"""
+    """Mark a task as completed and update word statistics and chat status"""
     daily_tasks_collection = get_daily_tasks_collection()
     words_collection = get_words_collection()
+    tutor_chats_collection = get_tutor_chats_collection()
     today = date.today().isoformat()
     
     # Find the daily task document
@@ -63,12 +65,16 @@ async def complete_task(
     
     # Find the specific task
     task_found = False
+    chat_id_to_update = None
     for task in daily_task.get("tasks", []):
         if task["taskId"] == task_id:
             task_found = True
             # Update task status
             task["status"] = TaskStatus.COMPLETED.value
             task["result"] = result.value
+            
+            # Get chatId to update chat status
+            chat_id_to_update = task.get("chatId")
             
             # Update word statistics and priority
             word_ids = task.get("wordIds", [])
@@ -130,6 +136,21 @@ async def complete_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
+    
+    # Update chat status from PENDING to PASS/FAIL when task is completed
+    if chat_id_to_update:
+        try:
+            chat_id_obj = ObjectId(chat_id_to_update) if isinstance(chat_id_to_update, str) else chat_id_to_update
+            chat_status = ChatStatus.PASS.value if result == TaskResult.PASS else ChatStatus.FAIL.value
+            await tutor_chats_collection.update_one(
+                {"_id": chat_id_obj, "userId": ObjectId(user_id)},
+                {"$set": {"finalResult": chat_status}}
+            )
+        except Exception as e:
+            # Log error but don't fail the task completion
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to update chat status: {e}")
     
     # Update the daily task document
     await daily_tasks_collection.update_one(

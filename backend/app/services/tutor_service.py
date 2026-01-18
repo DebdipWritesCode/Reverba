@@ -3,7 +3,7 @@ from bson import ObjectId
 from openai import OpenAI
 from typing import Optional, List
 from app.database import get_tutor_chats_collection, get_words_collection
-from app.models.tutor_chat import TutorEvaluationRequest, TutorEvaluationResponse, ChatMessage, EvaluationResult
+from app.models.tutor_chat import TutorEvaluationRequest, TutorEvaluationResponse, ChatMessage, EvaluationResult, ChatStatus
 from app.models.daily_task import TaskType, TaskResult
 from app.settings.get_env import OPENAI_API_KEY, OPENAI_MODEL
 import json
@@ -125,17 +125,18 @@ async def evaluate_response(
         }
         messages.append(assistant_message)
         
-        # Determine final result
+        # Determine final result - but don't update chat status yet (wait for task completion)
+        # Chat status will be updated when task is completed in task_service
         final_result = TaskResult.PASS if result == "PASS" else TaskResult.FAIL
         
-        # Save or update chat
+        # Save or update chat (keep status as PENDING until task is completed)
         if existing_chat:
             await tutor_chats_collection.update_one(
                 {"_id": existing_chat["_id"]},
                 {
                     "$set": {
-                        "messages": messages,
-                        "finalResult": final_result.value
+                        "messages": messages
+                        # Don't update finalResult here - it will be updated when task is completed
                     }
                 }
             )
@@ -146,7 +147,7 @@ async def evaluate_response(
                 "wordId": ObjectId(request.wordId),
                 "taskType": request.taskType.value,
                 "messages": messages,
-                "finalResult": final_result.value,
+                "finalResult": ChatStatus.PENDING.value,  # Start as PENDING
                 "createdAt": datetime.utcnow()
             }
             result = await tutor_chats_collection.insert_one(chat_doc)
@@ -303,6 +304,10 @@ async def continue_chat(user_id: str, chat_id: str, message: str) -> dict:
     if not chat:
         raise Exception("Chat not found")
     
+    # Don't allow continuing PENDING chats - task must be completed first
+    if chat.get("finalResult") == ChatStatus.PENDING.value:
+        raise Exception("Cannot continue chat for pending tasks. Please complete the task first.")
+    
     # Get word information
     word = await words_collection.find_one({
         "_id": chat["wordId"],
@@ -399,18 +404,19 @@ async def get_chat_history(user_id: str, chat_id: str) -> dict:
         "wordId": str(chat["wordId"]),
         "taskType": TaskType(chat.get("taskType")),
         "messages": chat.get("messages", []),
-        "finalResult": TaskResult(chat.get("finalResult", "FAIL")),
+        "finalResult": ChatStatus(chat.get("finalResult", ChatStatus.PENDING.value)),
         "createdAt": chat.get("createdAt")
     }
 
 async def list_user_chats(user_id: str, limit: int = 50, offset: int = 0) -> List[dict]:
-    """List all chats for a user"""
+    """List all chats for a user - only return completed chats (PASS/FAIL), exclude PENDING"""
     tutor_chats_collection = get_tutor_chats_collection()
     words_collection = get_words_collection()
     
-    # Get chats sorted by createdAt descending
+    # Get chats sorted by createdAt descending - exclude PENDING chats
     chats = await tutor_chats_collection.find({
-        "userId": ObjectId(user_id)
+        "userId": ObjectId(user_id),
+        "finalResult": {"$ne": ChatStatus.PENDING.value}  # Exclude PENDING chats
     }).sort("createdAt", -1).skip(offset).limit(limit).to_list(length=limit)
     
     # Get word information for each chat
@@ -429,7 +435,7 @@ async def list_user_chats(user_id: str, limit: int = 50, offset: int = 0) -> Lis
             "word": word.get("word", "") if word else "",
             "meaning": word.get("meaning", "") if word else "",
             "taskType": TaskType(chat.get("taskType")),
-            "finalResult": TaskResult(chat.get("finalResult", "FAIL")),
+            "finalResult": ChatStatus(chat.get("finalResult", ChatStatus.FAIL.value)),
             "createdAt": chat.get("createdAt"),
             "messageCount": len(messages)
         })

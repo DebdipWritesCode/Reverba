@@ -10,6 +10,7 @@ from app.database import (
     get_tutor_chats_collection
 )
 from app.models.daily_task import TaskType, TaskStatus, TaskResult
+from app.models.tutor_chat import ChatStatus
 from app.services.openai_service import generate_mcq_question
 from typing import List
 
@@ -160,7 +161,7 @@ async def generate_daily_tasks_for_user(user_id: str, task_date: str) -> dict:
             "wordId": word_id,
             "taskType": task_type.value,
             "messages": [],
-            "finalResult": TaskResult.FAIL.value,  # Default, will be updated on evaluation
+            "finalResult": ChatStatus.PENDING.value,  # Start as PENDING until task is completed
             "createdAt": datetime.now(timezone.utc)
         }
         result = await tutor_chats_collection.insert_one(chat_doc)
