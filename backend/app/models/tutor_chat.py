@@ -17,6 +17,10 @@ class TutorEvaluationRequest(BaseModel):
     wordId: str
     taskType: TaskType
     userResponse: str
+    chatId: Optional[str] = None  # Optional chatId for continuation
+
+class ChatContinueRequest(BaseModel):
+    message: str
 
 # Response Models
 class TutorEvaluationResponse(BaseModel):
@@ -25,6 +29,8 @@ class TutorEvaluationResponse(BaseModel):
     hint: Optional[str] = None
     answerRevealed: bool = False
     chatId: Optional[str] = None
+    expectedAnswer: Optional[str] = None
+    reason: Optional[str] = None
 
 class TutorChatResponse(BaseModel):
     id: str
@@ -34,6 +40,19 @@ class TutorChatResponse(BaseModel):
     messages: List[ChatMessage]
     finalResult: TaskResult
     createdAt: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ChatListItem(BaseModel):
+    id: str
+    wordId: str
+    word: str
+    meaning: str
+    taskType: TaskType
+    finalResult: TaskResult
+    createdAt: datetime
+    messageCount: int
     
     class Config:
         from_attributes = True

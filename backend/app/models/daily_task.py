@@ -24,6 +24,12 @@ class TaskItem(BaseModel):
     wordIds: List[str]
     status: TaskStatus
     result: Optional[TaskResult] = None
+    chatId: Optional[str] = None
+    # MCQ-specific fields
+    question: Optional[str] = None
+    options: Optional[List[str]] = None
+    correctOption: Optional[int] = None  # 1-4
+    optionReasons: Optional[List[str]] = None
 
 # Response Models
 class DailyTaskResponse(BaseModel):

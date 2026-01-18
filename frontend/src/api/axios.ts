@@ -38,8 +38,6 @@ api.interceptors.response.use(
           { withCredentials: true }
         )
 
-        console.log('Refresh token response:', res.data)
-
         if (!res.data?.access_token) {
           throw new Error('No access token in refresh response')
         }

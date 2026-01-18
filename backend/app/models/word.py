@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 
@@ -25,10 +25,14 @@ class WordUpdate(BaseModel):
     example: Optional[str] = None
     priority: Optional[int] = None
 
+class WordsBatchCreate(BaseModel):
+    words: List[WordCreate]
+
 # Response Models
 class FailureStats(BaseModel):
     meaning: int = 0
     sentence: int = 0
+    mcq: int = 0
     paragraph: int = 0
 
 class WordResponse(BaseModel):

@@ -54,7 +54,6 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
       } catch (error: any) {
         // Refresh failed - refresh token is invalid/expired or missing
         // This is expected if user is not logged in, so we just clear and continue
-        console.log('Refresh token not available or expired:', error.response?.status)
         dispatch(clearAccessToken())
       }
     }

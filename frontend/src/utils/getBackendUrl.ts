@@ -19,10 +19,5 @@ export const getBackendUrl = (): string => {
     }
   }
   
-  // Debug log in development to verify the URL
-  if (import.meta.env.DEV) {
-    console.log('🔗 Backend URL:', finalUrl)
-  }
-  
   return finalUrl
 }

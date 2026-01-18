@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 from typing import Optional, List
-from app.models.word import WordCreate, WordUpdate, WordResponse
+from app.models.word import WordCreate, WordUpdate, WordResponse, WordsBatchCreate
 from app.middleware.auth_middleware import get_current_user
 from app.services.word_service import (
-    create_word, get_words, get_word, update_word, delete_word,
+    create_word, create_words_batch, get_words, get_word, update_word, delete_word,
     promote_word, reintroduce_word
 )
 
@@ -16,6 +16,14 @@ async def create_word_endpoint(
 ):
     """Create a new word"""
     return await create_word(current_user["user_id"], word_data)
+
+@router.post("/batch", status_code=status.HTTP_201_CREATED)
+async def create_words_batch_endpoint(
+    batch_data: WordsBatchCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create multiple words in a single batch operation"""
+    return await create_words_batch(current_user["user_id"], batch_data.words)
 
 @router.get("", response_model=List[WordResponse])
 async def list_words(

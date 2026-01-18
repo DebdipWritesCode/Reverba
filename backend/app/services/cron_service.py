@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from bson import ObjectId
 import random
 import logging
@@ -6,9 +6,11 @@ from app.database import (
     get_users_collection,
     get_words_collection,
     get_daily_tasks_collection,
-    get_cron_runs_collection
+    get_cron_runs_collection,
+    get_tutor_chats_collection
 )
-from app.models.daily_task import TaskType, TaskStatus
+from app.models.daily_task import TaskType, TaskStatus, TaskResult
+from app.services.openai_service import generate_mcq_question
 from typing import List
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,7 @@ async def generate_daily_tasks():
     users_collection = get_users_collection()
     cron_runs_collection = get_cron_runs_collection()
     
-    run_at = datetime.utcnow()
+    run_at = datetime.now(timezone.utc)
     stats = {
         "usersProcessed": 0,
         "tasksCreated": 0,
@@ -105,9 +107,9 @@ async def generate_daily_tasks_for_user(user_id: str, task_date: str) -> dict:
     
     # Select words per priority
     # P1 → 1 word (MEANING)
-    # P2 → 2 words (SENTENCE)
-    # P3 → 3 words (MCQ)
-    # P4 → 2 words (PARAGRAPH)
+    # P2 → 2 words (SENTENCE) - 2 separate tasks
+    # P3 → 3 words (MCQ) - 3 separate tasks
+    # P4 → 2 words (PARAGRAPH) - 2 separate tasks
     
     selected_words = {
         1: _select_words(words_by_priority[1], 1),
@@ -116,64 +118,126 @@ async def generate_daily_tasks_for_user(user_id: str, task_date: str) -> dict:
         4: _select_words(words_by_priority[4], 2)
     }
     
-    # Create tasks
-    tasks = []
-    task_id_counter = 1
-    
-    # P1 - MEANING task
-    if selected_words[1]:
-        tasks.append({
-            "taskId": f"task_{task_id_counter}",
-            "type": TaskType.MEANING.value,
-            "wordIds": [str(word["_id"]) for word in selected_words[1]],
-            "status": TaskStatus.PENDING.value,
-            "result": None
-        })
-        task_id_counter += 1
-    
-    # P2 - SENTENCE task
-    if selected_words[2]:
-        tasks.append({
-            "taskId": f"task_{task_id_counter}",
-            "type": TaskType.SENTENCE.value,
-            "wordIds": [str(word["_id"]) for word in selected_words[2]],
-            "status": TaskStatus.PENDING.value,
-            "result": None
-        })
-        task_id_counter += 1
-    
-    # P3 - MCQ task
-    if selected_words[3]:
-        tasks.append({
-            "taskId": f"task_{task_id_counter}",
-            "type": TaskType.MCQ.value,
-            "wordIds": [str(word["_id"]) for word in selected_words[3]],
-            "status": TaskStatus.PENDING.value,
-            "result": None
-        })
-        task_id_counter += 1
-    
-    # P4 - PARAGRAPH task
-    if selected_words[4]:
-        tasks.append({
-            "taskId": f"task_{task_id_counter}",
-            "type": TaskType.PARAGRAPH.value,
-            "wordIds": [str(word["_id"]) for word in selected_words[4]],
-            "status": TaskStatus.PENDING.value,
-            "result": None
-        })
-        task_id_counter += 1
-    
-    # Update lastReviewedAt for selected words
+    # Collect all selected word IDs for priority update
     all_selected_word_ids = []
     for priority_words in selected_words.values():
         for word in priority_words:
             all_selected_word_ids.append(word["_id"])
     
+    # Update priority for non-selected words: priority + 1 (max 4)
+    all_active_word_ids = [word["_id"] for word in active_words]
+    non_selected_word_ids = [
+        word_id for word_id in all_active_word_ids 
+        if word_id not in all_selected_word_ids
+    ]
+    
+    if non_selected_word_ids:
+        # Get current priorities for non-selected words
+        non_selected_words = await words_collection.find({
+            "_id": {"$in": non_selected_word_ids}
+        }).to_list(length=None)
+        
+        # Update each non-selected word's priority
+        for word in non_selected_words:
+            current_priority = word.get("priority", 1)
+            new_priority = min(current_priority + 1, 4)
+            if new_priority != current_priority:
+                await words_collection.update_one(
+                    {"_id": word["_id"]},
+                    {"$set": {"priority": new_priority, "updatedAt": datetime.now(timezone.utc)}}
+                )
+    
+    # Create tasks
+    tasks = []
+    task_id_counter = 1
+    tutor_chats_collection = get_tutor_chats_collection()
+    
+    # Helper function to create a tutor chat and return its ObjectId
+    async def create_tutor_chat(word_id: ObjectId, task_type: TaskType) -> ObjectId:
+        """Create a tutor chat document and return its ObjectId"""
+        chat_doc = {
+            "userId": ObjectId(user_id),
+            "wordId": word_id,
+            "taskType": task_type.value,
+            "messages": [],
+            "finalResult": TaskResult.FAIL.value,  # Default, will be updated on evaluation
+            "createdAt": datetime.now(timezone.utc)
+        }
+        result = await tutor_chats_collection.insert_one(chat_doc)
+        return result.inserted_id
+    
+    # P1 - MEANING task (1 word, 1 task)
+    if selected_words[1]:
+        word = selected_words[1][0]
+        chat_id = await create_tutor_chat(word["_id"], TaskType.MEANING)
+        tasks.append({
+            "taskId": f"task_{task_id_counter}",
+            "type": TaskType.MEANING.value,
+            "wordIds": [str(word["_id"])],
+            "status": TaskStatus.PENDING.value,
+            "result": None,
+            "chatId": chat_id  # Store as ObjectId, not string
+        })
+        task_id_counter += 1
+    
+    # P2 - SENTENCE tasks (2 words, 2 separate tasks)
+    if selected_words[2]:
+        for word in selected_words[2]:
+            chat_id = await create_tutor_chat(word["_id"], TaskType.SENTENCE)
+            tasks.append({
+                "taskId": f"task_{task_id_counter}",
+                "type": TaskType.SENTENCE.value,
+                "wordIds": [str(word["_id"])],
+                "status": TaskStatus.PENDING.value,
+                "result": None,
+                "chatId": chat_id  # Store as ObjectId, not string
+            })
+            task_id_counter += 1
+    
+    # P3 - MCQ tasks (3 words, 3 separate tasks with AI-generated questions)
+    if selected_words[3]:
+        for word in selected_words[3]:
+            try:
+                # Generate MCQ question using OpenAI
+                mcq_data = await generate_mcq_question(word)
+                chat_id = await create_tutor_chat(word["_id"], TaskType.MCQ)
+                tasks.append({
+                    "taskId": f"task_{task_id_counter}",
+                    "type": TaskType.MCQ.value,
+                    "wordIds": [str(word["_id"])],
+                    "status": TaskStatus.PENDING.value,
+                    "result": None,
+                    "chatId": chat_id,  # Store as ObjectId, not string
+                    "question": mcq_data.get("question"),
+                    "options": mcq_data.get("options"),
+                    "correctOption": mcq_data.get("correctOption"),
+                    "optionReasons": mcq_data.get("optionReasons")
+                })
+                task_id_counter += 1
+            except Exception as e:
+                logger.error(f"Failed to generate MCQ for word {word.get('word')}: {e}")
+                # Skip this word if MCQ generation fails
+                continue
+    
+    # P4 - PARAGRAPH tasks (2 words, 2 separate tasks)
+    if selected_words[4]:
+        for word in selected_words[4]:
+            chat_id = await create_tutor_chat(word["_id"], TaskType.PARAGRAPH)
+            tasks.append({
+                "taskId": f"task_{task_id_counter}",
+                "type": TaskType.PARAGRAPH.value,
+                "wordIds": [str(word["_id"])],
+                "status": TaskStatus.PENDING.value,
+                "result": None,
+                "chatId": chat_id  # Store as ObjectId, not string
+            })
+            task_id_counter += 1
+    
+    # Update lastReviewedAt for selected words
     if all_selected_word_ids:
         await words_collection.update_many(
             {"_id": {"$in": all_selected_word_ids}},
-            {"$set": {"lastReviewedAt": datetime.utcnow()}}
+            {"$set": {"lastReviewedAt": datetime.now(timezone.utc)}}
         )
     
     # Create daily_tasks document
@@ -182,7 +246,7 @@ async def generate_daily_tasks_for_user(user_id: str, task_date: str) -> dict:
             "userId": ObjectId(user_id),
             "date": task_date,
             "tasks": tasks,
-            "createdAt": datetime.utcnow()
+            "createdAt": datetime.now(timezone.utc)
         })
     
     return {"tasksCreated": len(tasks)}

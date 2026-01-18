@@ -3,6 +3,9 @@ import Login from '@/pages/Auth/Login'
 import Signup from '@/pages/Auth/Signup'
 import ProtectedRoute from './ProtectedRoute'
 import DashboardLayout from '@/layouts/DashboardLayout'
+import AddWords from '@/pages/AddWords'
+import TodaysTasks from '@/pages/TodaysTasks'
+import ChatHistory from '@/pages/ChatHistory'
 
 // Placeholder dashboard component
 const Dashboard = () => {
@@ -16,39 +19,6 @@ const Dashboard = () => {
   )
 }
 
-// Placeholder components for new routes
-const TodaysTasks = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-4">Today's Tasks</h1>
-        <p className="text-muted-foreground">Your tasks for today will appear here.</p>
-      </div>
-    </div>
-  )
-}
-
-const AddWords = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-4">Add Words</h1>
-        <p className="text-muted-foreground">Add new words to your vocabulary.</p>
-      </div>
-    </div>
-  )
-}
-
-const ChatHistory = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-4">Chat History</h1>
-        <p className="text-muted-foreground">Your chat history will appear here.</p>
-      </div>
-    </div>
-  )
-}
 
 const MyProfile = () => {
   return (

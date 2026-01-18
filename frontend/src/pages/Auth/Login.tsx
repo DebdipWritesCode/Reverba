@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input'
 import ThemeToggle from '@/components/ThemeToggle'
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
 })
 
@@ -48,8 +48,6 @@ const Login = () => {
     setError(null)
     try {
       const response = await authApi.login(data)
-      // Debug: Log the response to check if firstName/lastName are present
-      console.log('Login response:', response)
       // Store access token in Redux
       dispatch(setAccessToken(response.access_token))
       dispatch(setUserData({ 

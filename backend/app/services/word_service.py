@@ -1,6 +1,7 @@
 from datetime import datetime
 from bson import ObjectId
 from fastapi import HTTPException, status
+from pymongo.errors import DuplicateKeyError
 from app.database import get_words_collection
 from app.models.word import WordCreate, WordUpdate, WordResponse, Priority, State
 from typing import List, Optional
@@ -54,10 +55,116 @@ async def create_word(user_id: str, word_data: WordCreate) -> dict:
         "updatedAt": datetime.utcnow()
     }
     
-    result = await words_collection.insert_one(word_doc)
-    word_doc["_id"] = result.inserted_id
+    try:
+        result = await words_collection.insert_one(word_doc)
+        word_doc["_id"] = result.inserted_id
+    except DuplicateKeyError:
+        # Handle race condition where word was inserted between check and insert
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Word already exists"
+        )
     
     return _word_doc_to_response(word_doc)
+
+async def create_words_batch(user_id: str, words_data: List[WordCreate]) -> dict:
+    """Create multiple words for a user in a single batch operation"""
+    words_collection = get_words_collection()
+    user_object_id = ObjectId(user_id)
+    now = datetime.utcnow()
+    
+    # Step 1: Validate all words before any database operations
+    normalized_words = []
+    seen_in_batch = set()
+    
+    for word_data in words_data:
+        # Normalize word
+        normalized = normalize_word(word_data.word)
+        
+        # Check for duplicates within the batch
+        if normalized in seen_in_batch:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Duplicate word in batch: '{word_data.word}'"
+            )
+        seen_in_batch.add(normalized)
+        normalized_words.append(normalized)
+        
+        # Validate priority
+        if word_data.priority not in [1, 2, 3, 4]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid priority for word '{word_data.word}': Priority must be between 1 and 4"
+            )
+    
+    # Step 2: Check for duplicates against existing user words in database
+    existing_words = await words_collection.find({
+        "userId": user_object_id,
+        "normalizedWord": {"$in": normalized_words}
+    }).to_list(length=None)
+    
+    if existing_words:
+        existing_normalized = {word["normalizedWord"] for word in existing_words}
+        duplicate_words = [
+            words_data[i].word 
+            for i, normalized in enumerate(normalized_words) 
+            if normalized in existing_normalized
+        ]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Words already exist: {', '.join(duplicate_words)}"
+        )
+    
+    # Step 3: All validations passed, create all word documents
+    word_docs = []
+    for word_data in words_data:
+        normalized = normalize_word(word_data.word)
+        word_doc = {
+            "userId": user_object_id,
+            "word": word_data.word,
+            "normalizedWord": normalized,
+            "meaning": word_data.meaning,
+            "example": word_data.example,
+            "priority": word_data.priority,
+            "state": State.ACTIVE.value,
+            "masteryCount": 0,
+            "lastReviewedAt": None,
+            "lastPromotedAt": None,
+            "failureStats": {
+                "meaning": 0,
+                "sentence": 0,
+                "paragraph": 0
+            },
+            "createdAt": now,
+            "updatedAt": now
+        }
+        word_docs.append(word_doc)
+    
+    # Step 4: Insert all words at once
+    try:
+        result = await words_collection.insert_many(word_docs)
+    except DuplicateKeyError:
+        # Handle race condition where word was inserted between check and insert
+        # Re-check which words are duplicates
+        existing_words = await words_collection.find({
+            "userId": user_object_id,
+            "normalizedWord": {"$in": normalized_words}
+        }).to_list(length=None)
+        existing_normalized = {word["normalizedWord"] for word in existing_words}
+        duplicate_words = [
+            words_data[i].word 
+            for i, normalized in enumerate(normalized_words) 
+            if normalized in existing_normalized
+        ]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Words already exist: {', '.join(duplicate_words)}"
+        )
+    
+    return {
+        "message": "Words created successfully",
+        "count": len(result.inserted_ids)
+    }
 
 async def get_words(
     user_id: str,

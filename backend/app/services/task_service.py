@@ -70,7 +70,7 @@ async def complete_task(
             task["status"] = TaskStatus.COMPLETED.value
             task["result"] = result.value
             
-            # Update word statistics
+            # Update word statistics and priority
             word_ids = task.get("wordIds", [])
             task_type = task.get("type")
             
@@ -85,28 +85,30 @@ async def complete_task(
                     }
                     
                     if result == TaskResult.FAIL:
-                        # Increment failure stats
+                        # FAIL: Set priority to 2 and increment failure stats
                         failure_field = f"failureStats.{task_type.lower()}"
                         await words_collection.update_one(
                             {"_id": word_id},
                             {
-                                "$inc": {failure_field: 1},
-                                "$set": update_doc
+                                "$set": {
+                                    **update_doc,
+                                    "priority": 2
+                                },
+                                "$inc": {failure_field: 1}
                             }
                         )
                     else:
-                        # Success - update word based on priority
+                        # PASS: Set priority to 1
+                        update_doc["priority"] = 1
+                        
+                        # For P4 words, also increment mastery count
                         if word.get("priority") == 4:
-                            # Increment mastery count for P4
                             new_mastery_count = word.get("masteryCount", 0) + 1
+                            update_doc["masteryCount"] = new_mastery_count
+                            
                             await words_collection.update_one(
                                 {"_id": word_id},
-                                {
-                                    "$set": {
-                                        **update_doc,
-                                        "masteryCount": new_mastery_count
-                                    }
-                                }
+                                {"$set": update_doc}
                             )
                             
                             # Check if word should be marked as mastered
@@ -116,7 +118,6 @@ async def complete_task(
                                     {"$set": {"state": "MASTERED"}}
                                 )
                         else:
-                            # Just update last reviewed
                             await words_collection.update_one(
                                 {"_id": word_id},
                                 {"$set": update_doc}
@@ -165,7 +166,12 @@ def _task_doc_to_response(task_doc: dict) -> dict:
                 "type": task["type"],
                 "wordIds": task["wordIds"],
                 "status": task["status"],
-                "result": task.get("result")
+                "result": task.get("result"),
+                "chatId": str(task.get("chatId")) if task.get("chatId") else None,  # Convert ObjectId to string
+                "question": task.get("question"),
+                "options": task.get("options"),
+                "correctOption": task.get("correctOption"),
+                "optionReasons": task.get("optionReasons")
             }
             for task in task_doc.get("tasks", [])
         ],
