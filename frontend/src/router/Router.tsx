@@ -12,25 +12,7 @@ import TodaysTasks from '@/pages/TodaysTasks'
 import ChatHistory from '@/pages/ChatHistory'
 import MyProfile from '@/pages/MyProfile'
 import Admin from '@/pages/Admin'
-
-
-
-
-// Placeholder landing page
-const Landing = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Reverba</h1>
-        <p className="text-muted-foreground mb-8">Learn and master new words</p>
-        <div className="space-x-4">
-          <a href="/login" className="text-primary hover:underline">Login</a>
-          <a href="/signup" className="text-primary hover:underline">Sign Up</a>
-        </div>
-      </div>
-    </div>
-  )
-}
+import Landing from '@/pages/Landing'
 
 // 404 page
 const NotFound = () => {
