@@ -4,12 +4,16 @@ interface AuthState {
   accessToken: string | null
   isInitialized: boolean
   email: string | null
+  firstName: string | null
+  lastName: string | null
 }
 
 const initialState: AuthState = {
   accessToken: null,
   isInitialized: false,
   email: null,
+  firstName: null,
+  lastName: null,
 }
 
 const authSlice = createSlice({
@@ -31,10 +35,14 @@ const authSlice = createSlice({
     clearAccessToken: (state) => {
       state.accessToken = null
       state.email = null
+      state.firstName = null
+      state.lastName = null
       state.isInitialized = true
     },
     setUserData: (state, action) => {
       state.email = action.payload.email || null
+      state.firstName = action.payload.firstName || null
+      state.lastName = action.payload.lastName || null
     },
     setInitialized: (state) => {
       state.isInitialized = true

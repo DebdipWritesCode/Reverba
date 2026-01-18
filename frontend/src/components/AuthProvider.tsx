@@ -43,7 +43,9 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
           // Store the new access token (this also sets isInitialized)
           dispatch(setAccessToken(response.data.access_token))
           dispatch(setUserData({ 
-            email: response.data.email
+            email: response.data.email,
+            firstName: response.data.firstName || null,
+            lastName: response.data.lastName || null
           }))
         } else {
           // No token in response, clear and mark as initialized

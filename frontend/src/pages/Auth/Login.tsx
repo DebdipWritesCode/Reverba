@@ -48,10 +48,14 @@ const Login = () => {
     setError(null)
     try {
       const response = await authApi.login(data)
+      // Debug: Log the response to check if firstName/lastName are present
+      console.log('Login response:', response)
       // Store access token in Redux
       dispatch(setAccessToken(response.access_token))
       dispatch(setUserData({ 
-        email: response.email
+        email: response.email,
+        firstName: response.firstName || null,
+        lastName: response.lastName || null
       }))
       // Redirect to dashboard
       navigate('/dashboard')

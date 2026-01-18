@@ -21,15 +21,35 @@ const DashboardLayout = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const userEmail = useSelector((state: RootState) => state.auth.email)
+  const firstName = useSelector((state: RootState) => state.auth.firstName)
+  const lastName = useSelector((state: RootState) => state.auth.lastName)
 
-  const getInitials = (email: string | null) => {
-    if (!email) return 'US'
-    // Extract first letter before @ symbol
-    const prefix = email.split('@')[0]
-    if (prefix.length >= 2) {
-      return prefix.substring(0, 2).toUpperCase()
+  const getInitials = (firstName: string | null, lastName: string | null) => {
+    if (firstName && lastName) {
+      return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase()
     }
-    return prefix.charAt(0).toUpperCase() + 'U'
+    if (firstName) {
+      return firstName.substring(0, 2).toUpperCase()
+    }
+    if (userEmail) {
+      // Fallback to email if name is not available
+      const prefix = userEmail.split('@')[0]
+      if (prefix.length >= 2) {
+        return prefix.substring(0, 2).toUpperCase()
+      }
+      return prefix.charAt(0).toUpperCase() + 'U'
+    }
+    return 'US'
+  }
+
+  const getUserName = () => {
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`
+    }
+    if (firstName) {
+      return firstName
+    }
+    return userEmail || 'User'
   }
 
   const handleLogout = () => {
@@ -41,6 +61,9 @@ const DashboardLayout = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-background">
       <Sidebar
         userEmail={userEmail}
+        firstName={firstName}
+        lastName={lastName}
+        getUserName={getUserName}
         getInitials={getInitials}
         isOpen={isOpen}
         setIsOpen={setIsOpen}
@@ -68,6 +91,9 @@ const DashboardLayout = () => {
 
 const Sidebar = ({
   userEmail,
+  firstName,
+  lastName,
+  getUserName,
   getInitials,
   isOpen,
   setIsOpen,
@@ -75,7 +101,10 @@ const Sidebar = ({
   setIsCollapsed,
 }: {
   userEmail: string | null
-  getInitials: (email: string | null) => string
+  firstName: string | null
+  lastName: string | null
+  getUserName: () => string
+  getInitials: (firstName: string | null, lastName: string | null) => string
   isOpen: boolean
   setIsOpen: (open: boolean) => void
   isCollapsed: boolean
@@ -97,6 +126,9 @@ const Sidebar = ({
         <SheetContent side="left" className="w-[300px] p-0">
           <SidebarContent
             userEmail={userEmail}
+            firstName={firstName}
+            lastName={lastName}
+            getUserName={getUserName}
             getInitials={getInitials}
             onNavigate={() => setIsOpen(false)}
             isCollapsed={false}
@@ -112,6 +144,9 @@ const Sidebar = ({
       >
         <SidebarContent
           userEmail={userEmail}
+          firstName={firstName}
+          lastName={lastName}
+          getUserName={getUserName}
           getInitials={getInitials}
           isCollapsed={isCollapsed}
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
@@ -123,13 +158,19 @@ const Sidebar = ({
 
 const SidebarContent = ({
   userEmail,
+  firstName,
+  lastName,
+  getUserName,
   getInitials,
   onNavigate,
   isCollapsed,
   onToggleCollapse,
 }: {
   userEmail: string | null
-  getInitials: (email: string | null) => string
+  firstName: string | null
+  lastName: string | null
+  getUserName: () => string
+  getInitials: (firstName: string | null, lastName: string | null) => string
   onNavigate?: () => void
   isCollapsed: boolean
   onToggleCollapse: () => void
@@ -259,11 +300,14 @@ const SidebarContent = ({
         >
           <Avatar className="shrink-0">
             <AvatarImage src="" />
-            <AvatarFallback>{getInitials(userEmail)}</AvatarFallback>
+            <AvatarFallback>{getInitials(firstName, lastName)}</AvatarFallback>
           </Avatar>
           {!isCollapsed && (
             <div className="overflow-hidden">
-              <p className="font-medium truncate">{userEmail || 'User'}</p>
+              <p className="font-medium truncate">{getUserName()}</p>
+              {userEmail && (
+                <p className="text-sm text-muted-foreground truncate">{userEmail}</p>
+              )}
             </div>
           )}
         </div>
