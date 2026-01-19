@@ -40,4 +40,8 @@ export const wordsApi = {
     const response = await api.get<WordResponse[]>('/api/words')
     return response.data
   },
+
+  deleteWord: async (wordId: string): Promise<void> => {
+    await api.delete(`/api/words/${wordId}`)
+  },
 }

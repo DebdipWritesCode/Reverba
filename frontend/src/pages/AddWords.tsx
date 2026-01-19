@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Search, ChevronLeft, ChevronRight, Info, X } from 'lucide-react'
+import { Plus, Search, ChevronLeft, ChevronRight, Info, X, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 
 const wordSchema = z.object({
@@ -43,6 +43,8 @@ const AddWords = () => {
   const [priorityFilter, setPriorityFilter] = useState<number | null>(null)
   const [stateFilter, setStateFilter] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const wordsPerPage = 15
 
   const form = useForm<WordFormValues>({
@@ -128,6 +130,7 @@ const AddWords = () => {
     }
 
     try {
+      setIsSubmitting(true)
       const wordData = {
         ...data,
         priority: 1, // Always set to 1
@@ -153,6 +156,8 @@ const AddWords = () => {
       } else {
         toast.error(errorMessage)
       }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -160,6 +165,27 @@ const AddWords = () => {
   const handleWordClick = (word: WordResponse) => {
     setSelectedWord(word)
     setIsDetailDialogOpen(true)
+  }
+
+  // Handle delete word
+  const handleDeleteWord = async (wordId: string, event: React.MouseEvent) => {
+    event.stopPropagation() // Prevent triggering word detail dialog
+    
+    if (!confirm('Are you sure you want to delete this word?')) {
+      return
+    }
+
+    try {
+      setIsDeleting(wordId)
+      await wordsApi.deleteWord(wordId)
+      toast.success('Word deleted successfully!')
+      await fetchWords() // Refresh the list
+    } catch (error: any) {
+      console.error('Error deleting word:', error)
+      toast.error(error.response?.data?.detail || 'Failed to delete word')
+    } finally {
+      setIsDeleting(null)
+    }
   }
 
   // Format date
@@ -322,9 +348,22 @@ const AddWords = () => {
                 <div
                   key={word.id}
                   onClick={() => handleWordClick(word)}
-                  className="p-4 border rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                  className="p-4 border rounded-lg cursor-pointer hover:bg-accent transition-colors relative"
                 >
-                  <h3 className="font-semibold text-lg mb-2">{word.word}</h3>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7"
+                    onClick={(e) => handleDeleteWord(word.id, e)}
+                    disabled={isDeleting === word.id}
+                  >
+                    {isDeleting === word.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <h3 className="font-semibold text-lg mb-2 pr-8">{word.word}</h3>
                   <p className="text-sm text-muted-foreground line-clamp-2">
                     {word.meaning}
                   </p>
@@ -453,11 +492,19 @@ const AddWords = () => {
                   type="button"
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={!canAddMoreWords}>
-                  Add Word
+                <Button type="submit" disabled={!canAddMoreWords || isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    'Add Word'
+                  )}
                 </Button>
               </DialogFooter>
             </form>
